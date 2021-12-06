@@ -127,8 +127,13 @@ private:
     PropertyValueTable m_prop;
     bool m_lvEnbSet;
 
+    const char *g_image_directory_create_cmd = "mkdir /sdcard/storage";
+
+    const char *g_image_directory_clear_cmd = "rm -rf /sdcard/storage/*";
     char* live_view_buffer;
     int32_t live_view_buffer_size = 0;
+
+    uint8_t still_image_destination;
 };
 } // namespace cli
 

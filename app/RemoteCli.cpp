@@ -44,12 +44,22 @@ using namespace std::chrono;
 
 namespace SDK = SCRSDK;
 
+typedef enum _sony_sdk_message{
+    gSony_shutter_full_release              = 0x01,
+    gSony_shutetr_af_full_release           = 0x03, 
+    gSony_get_live_view                     = 0x08,
+    gSony_start_record_movie                = 0x0E,
+    gSony_stop_record_movie                 = 0x0F,
+} gSony_SDK_message;
+
+
 // Global dll object
 // cli::CRLibInterface* cr_lib = nullptr;
 typedef std::shared_ptr<cli::CameraDevice> CameraDevicePtr;
 /* gst local decleration */
 std::queue<GstMapInfo> m_stream_sample;
 std::queue<GstBuffer> m_stream_buffer;
+std::queue<gSony_SDK_message> m_sony_msg;
 
 CameraDevicePtr camera;
 bool camera_ready = false;
@@ -65,12 +75,16 @@ void check_frame(uint8_t* _data, int _len);
 uint8_t get_nxt_sample(GstMapInfo& _sample);
 
 // thread
-pthread_t thrd_send_buffer, thrd_push_buffer, thrd_get_buffer;
+pthread_t thrd_get_buffer, thrd_push_buffer, thrd_process_cmd, thrd_control_cam, thrd_send_buffer;
 bool thrd_must_exit = false;
 bool all_threads_init();
 void *send_buffer_handle(void *threadid);
 void *push_buffer_handle(void *threadid);
+void *process_command_handle(void *threadid);
+void *control_camera_handle(void *threadid);
 void *get_buffer_handle(void *threadid);
+
+
 bool m_is_frame_feed = false;
 bool is_need_data = false;
 bool m_pipeline_ready = false;
@@ -88,12 +102,16 @@ static void sigint_handler(int data) {
     printf("\n");
 
     thrd_must_exit = true;
-    if(thrd_send_buffer != NULL)
-        pthread_join(thrd_send_buffer, NULL);
-    if(thrd_push_buffer != NULL)
-        pthread_join(thrd_push_buffer, NULL);
     if(thrd_get_buffer != NULL)
         pthread_join(thrd_get_buffer, NULL);
+    if(thrd_push_buffer != NULL)
+        pthread_join(thrd_push_buffer, NULL);
+    if(thrd_send_buffer != NULL)
+        pthread_join(thrd_send_buffer, NULL);
+    if(thrd_process_cmd != NULL)
+        pthread_join(thrd_process_cmd, NULL);
+    if(thrd_control_cam != NULL)
+        pthread_join(thrd_control_cam, NULL);
 
     // port
     try {
@@ -110,40 +128,9 @@ cb_need_data(GstElement *appsrc,
              guint unused_size,
              gpointer user_data)
 {
-    #if 1
-    // printf("cb_need_data\n");
-    // printf("the size buffer of appsrc need: [%d]\n",unused_size);
+
     is_need_data = true;
-    #else
-     g_print("In %s\n", __func__);
-    static gboolean white = FALSE;
-    static GstClockTime timestamp = 0;
-    GstBuffer *buffer;
-    guint size;
-    GstFlowReturn ret;
 
-    size = 385 * 288 * 2;
-
-    buffer = gst_buffer_new_allocate (NULL, size, NULL);
-
-    /* this makes the image black/white */
-    gst_buffer_memset (buffer, 0, white ? 0xff : 0x0, size);
-
-    white = !white;
-
-    GST_BUFFER_PTS (buffer) = timestamp;
-    GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, 2);
-
-    timestamp += GST_BUFFER_DURATION (buffer);
-
-    //g_signal_emit_by_name (appsrc, "push-buffer", buffer, &ret);
-    ret = gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);
-
-    if (ret != GST_FLOW_OK) {
-        /* something wrong, stop pushing */
-        g_main_loop_quit (loop);
-    }
-    #endif
 }
 
 static void cb_enough_data(GstAppSrc *src, gpointer user_data)
@@ -177,6 +164,7 @@ int cnt = 0;
 GstFlowReturn new_sample(GstAppSink* appsink, gpointer /*data*/)
 {
     // Get caps and frame
+    // printf("got new sample\n");
     GstSample *sample = gst_app_sink_pull_sample(appsink);
     GstCaps *caps = gst_sample_get_caps(sample);
     GstBuffer *buffer = gst_sample_get_buffer(sample);
@@ -373,6 +361,7 @@ CameraDevicePtr camera_init()
     }
     cli::tout << "Camera connection successfully initiated!\n\n";
 
+
     camera_ready = true;
     return camera;
 }
@@ -386,6 +375,11 @@ int main()
         // printf(".");
         usleep(100000);
     }
+
+    // camera->get_position_key_setting();
+    // camera->set_position_key_setting();
+
+
     // int c = 0;
     // while(camera->get_live_view_buffer_size()==0){
     //     camera->get_live_view(c++);
@@ -415,12 +409,22 @@ int main()
 
 bool all_threads_init(){
     int rc;
-    rc = pthread_create(&thrd_get_buffer, NULL, &get_buffer_handle, (int*)1);
+    rc = pthread_create(&thrd_process_cmd, NULL, &process_command_handle, (int*)1);
     if(rc){
-        printf("Error: khong the tao thread get buffer!\n");
+        printf("Error: khong the tao thread process command!\n");
         return false;
     }
+    printf("process command thread created\n");
+
+    usleep(100000);
+    rc = pthread_create(&thrd_get_buffer,NULL, &get_buffer_handle, (int*)2);
+    if(rc){
+        printf("Error: khong the tao thread get buffer!\n");
+        return false;  
+    }
     printf("Get buffer thread created\n");
+
+    usleep(100000);
     rc = pthread_create(&thrd_push_buffer, NULL, &push_buffer_handle, (int*)3);
     if(rc){
         printf("Error: khong the tao thread push buffer!\n");
@@ -428,12 +432,21 @@ bool all_threads_init(){
     }
     printf("Push buffer thread created\n");
 
-    // rc = pthread_create(&thrd_send_buffer, NULL, &send_buffer_handle, (int *)5);
-    // if (rc){
-    //     printf("Error: Khong the tao thread send buffer!\n");
-    //     return false;
-    // }
-    // printf("Send Buffer thread created\n");
+    usleep(100000);
+#if 1
+    rc = pthread_create(&thrd_control_cam, NULL, &control_camera_handle, (int*)4);
+    if(rc){
+        printf("Error: khong the tao thread control!\n");
+        return false;
+    }
+    printf("Control camera thread created\n");
+#endif
+    rc = pthread_create(&thrd_send_buffer, NULL, &send_buffer_handle, (int *)5);
+    if (rc){
+        printf("Error: Khong the tao thread send buffer!\n");
+        return false;
+    }
+    printf("Send Buffer thread created\n");
     return true;
 }
 
@@ -472,25 +485,25 @@ void gstreamer_init(char* host_addr, int host_port){
         sprintf(launch_str,"appsrc name=mysrc is-live=true do-timestamp=true "
         // sprintf(launch_str,"filesrc location=./LiveView0.JPG "
                                "! jpegdec "
-                               "! video/x-raw,width=%d,height=%d "
+                               "! video/x-raw "
                                "! clockoverlay "
                                "! videoconvert "
-                               "! tee name=t "
-                               "t. ! queue "
-                               "! x264enc speed-preset=1 byte-stream=true "
-                               "! h264parse "
-                               "! rtph264pay ! udpsink host=192.168.140.3 port=5004 "
+                               // "! tee name=t "
+                               // "t. ! queue "
+                               // "! x264enc speed-preset=1 byte-stream=true "
+                               // "! h264parse "
+                               // "! rtph264pay ! udpsink host=192.168.140.3 port=5004 "
                                // "! mp4mux "
                                // "! filesink location=./out.mp4"
 
                                // "! x264enc speed-preset=1 byte-stream=true "
                                // "! video/x-h264,width=1024,height=680 ! rtph264pay ! udpsink host=192.168.140.3 port=5004 "
                                // "t. ! queue "
-                               // "! x264enc speed-preset=1 "
-                               // // "! video/x-h264,width=1024,height=680 "//,framerate=30/1, bitrate=4000000 "
-                               // // "! appsink name=sink emit-signals=true sync=false max-buffers=1 drop=true"
-                               // "! fakesink"
-                              ,1024,680);
+                               "! x264enc speed-preset=1 byte-stream=true "
+                               "! video/x-h264 "//,width=1024,height=680 "//,framerate=30/1, bitrate=4000000 "
+                               "! appsink name=sink emit-signals=true sync=false max-buffers=1 drop=true "
+                              );
+
         #endif
         gst_init(NULL, NULL);
 
@@ -513,7 +526,7 @@ void gstreamer_init(char* host_addr, int host_port){
         g_signal_connect (appsrc, "need-data", G_CALLBACK(cb_need_data), NULL);
         g_signal_connect (appsrc, "enough-data", G_CALLBACK(cb_enough_data), NULL);
 
-#if 0
+#if 1
         // Get sink
         sink = gst_bin_get_by_name(GST_BIN(pipeline), "sink");
         /**
@@ -543,15 +556,15 @@ void gstreamer_init(char* host_addr, int host_port){
             success = FALSE;
         }    
         if(success){
-            // if ((s = socket(AF_INET,SOCK_DGRAM,0))<0)
-            // {
-            //     perror("socket");
-            //     exit(1);
-            // }
-            // bzero(&addr,sizeof(addr));
-            // addr.sin_family = AF_INET;
-            // addr.sin_port = htons(host_port);
-            // addr.sin_addr.s_addr = inet_addr(host_addr);
+            if ((s = socket(AF_INET,SOCK_DGRAM,0))<0)
+            {
+                perror("socket");
+                exit(1);
+            }
+            bzero(&addr,sizeof(addr));
+            addr.sin_family = AF_INET;
+            addr.sin_port = htons(host_port);
+            addr.sin_addr.s_addr = inet_addr(host_addr);
 
             m_pipeline_ready = true;
 
@@ -584,7 +597,7 @@ void feed_data_to_gstreamer(char* data, uint32_t size){
 
     GST_BUFFER_PTS (buffer) = timestamp;
     // duration = gst_util_uint64_scale_int (1, GST_SECOND, fps);
-    GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, 25);
+    GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, 30);
     timestamp += GST_BUFFER_DURATION (buffer);
 
     #else
@@ -601,7 +614,7 @@ void feed_data_to_gstreamer(char* data, uint32_t size){
 
     // ret = gst_app_src_push_buffer(GST_APP_SRC(appsrc), buffer);
     g_signal_emit_by_name (GST_APP_SRC(appsrc), "push-buffer", buffer, &ret);
-    
+    gst_buffer_unref (buffer);
     if(ret == GST_FLOW_OK){
         // printf("feed data to gstreamer %d\n", size);
     }else{
@@ -657,7 +670,7 @@ void *push_buffer_handle(void *threadid){
 
             }
         }
-        usleep(40000);
+        usleep(33000);
     }
 
     // if (pipeline != nullptr)
@@ -674,9 +687,10 @@ void *push_buffer_handle(void *threadid){
 
 }
 
-void *get_buffer_handle(void *threadid){
+void *process_command_handle(void *threadid){
     int cnt = 0;
-
+    int count_for_get_live_img = 0;
+    gSony_SDK_message msg;
     while(!thrd_must_exit){
         if(m_pipeline_ready){
             
@@ -685,7 +699,7 @@ void *get_buffer_handle(void *threadid){
                 if (camera->is_connected())
                 {
                     // printf("%s\n",__FUNCTION__);
-                    camera->get_live_view(cnt);
+                    // camera->get_live_view(cnt);
 
                     // if(camera->get_live_view_buffer_size() > 0){
                     //     char pathOfImg[100];
@@ -703,9 +717,33 @@ void *get_buffer_handle(void *threadid){
                     //     cnt++;
                     // }
 
+                    if(!m_sony_msg.empty()){
+                        gSony_SDK_message msg = m_sony_msg.front();
+                        m_sony_msg.pop();
+                        switch(msg){
+                            case gSony_get_live_view:
+                                // printf("****************************get_live_view\n");
+                                camera->get_live_view(cnt);
+                                break;
+                            case gSony_shutter_full_release:
+                                camera->capture_image();
+                                break;
+                            case gSony_shutetr_af_full_release:
+                                camera->af_shutter();
+                                break;
+                            case gSony_start_record_movie:
+                                camera->start_recording();
+                                break;
+                            case gSony_stop_record_movie:
+                                camera->stop_recording();
+                                break;
+                            default:
+                                break;
+                        }
+                    }
 
                 }
-                usleep(20000);
+                usleep(1000);
                 // usleep(1000000);
             }
             catch (...)
@@ -733,26 +771,78 @@ void *get_buffer_handle(void *threadid){
         SDK::Release();
 }
 
+void *get_buffer_handle(void *threadid){
+    // printf("------------------%s\n",__FUNCTION__);
+    while(!thrd_must_exit){
+        try{
+            if (camera->is_connected())
+            {
+                // printf("get live image\n");
+                gSony_SDK_message lv_msg = gSony_get_live_view;
+                m_sony_msg.push(lv_msg);
+                usleep(33000);
+            }
+        }catch(...){};
+    }
+}
 void *send_buffer_handle(void *threadid){
     static GstMapInfo _map;
 
-    while(!thrd_must_exit && m_pipeline_ready){
-
-        if(!get_nxt_sample(_map)){
-            usleep(1000);
-            continue;
+    while(!thrd_must_exit){
+        if(m_pipeline_ready){
+            if(!get_nxt_sample(_map)){
+                usleep(1000);
+                continue;
+            }
+            else{
+                // printf("[%d]\n",(int)_map.size);
+                check_frame((uint8_t* )_map.data, _map.size);
+            }
         }
-        else{
-            check_frame((uint8_t* )_map.data, _map.size);
-        }
-    
     }
 
     pthread_exit(NULL);
 }
 
+
+void *control_camera_handle(void *threadid){
+    gSony_SDK_message control_msg;
+
+    while(!thrd_must_exit){
+        if(camera_ready){
+            cli::tout << "input> ";
+            cli::text action;
+            std::getline(cli::tin, action);
+            cli::tout << '\n';
+
+            if(action == TEXT("1")){
+                control_msg = gSony_shutter_full_release;
+                printf("sony full release\n");
+                m_sony_msg.push(control_msg);
+            }
+            else if(action == TEXT("3")){
+                control_msg = gSony_shutetr_af_full_release;
+                printf("sony af full release\n");
+                m_sony_msg.push(control_msg);
+            }
+            else if(action == TEXT("15")){
+                if(control_msg == gSony_start_record_movie){
+                    printf("sony stop recodring movie\n");
+                    control_msg = gSony_stop_record_movie;
+                }else{
+                    printf("sony start recodring movie\n");
+                    control_msg = gSony_start_record_movie;
+                }
+                m_sony_msg.push(control_msg);
+            }
+        }
+    }
+}
+
+
 uint8_t get_nxt_sample(GstMapInfo& _sample){
     if(m_stream_sample.empty()){
+        // printf("sample empty\n");
         return 0;
     }
     _sample = m_stream_sample.front();
@@ -923,6 +1013,7 @@ void check_frame(uint8_t* _data, int _len){
         while (j - i > MAX_SEND_PACK) {
             sendto(s, _local_buf + i, MAX_SEND_PACK, 0, (struct sockaddr *) &addr, addr_len);
             i += MAX_SEND_PACK;
+
         }
 
         sendto(s, _local_buf + i, j - i, 0, (struct sockaddr *) &addr, addr_len);
@@ -930,37 +1021,17 @@ void check_frame(uint8_t* _data, int _len){
     #endif
 
         i = j;
-        if(j == _len) break;
+        if(j == _len) 
+            {    
+                printf("%s\n","send succes");
+                break;
+            }
         // usleep(FRAME_GAP);
     }
-
+    // printf("%s\n","send succes");
     auto stop = high_resolution_clock::now(); 
     auto duration = duration_cast<microseconds>(stop - start); 
     // cout << "frame size: " << _len << " , process time: " << duration.count() << endl;
 
 }
 
-void push_buffer_to_queue(char* data, uint32_t size){
-    GstBuffer *buffer;
-    static GstClockTime timestamp = 0;
-
-    // int size = width*height;
-    // printf("tp0 %d\n", size);
-    buffer = gst_buffer_new_allocate(NULL, size, NULL);
-    // printf("tp1\n");
-
-    GstMapInfo info;
-    if(!gst_buffer_map(buffer, &info, GST_MAP_WRITE)){
-        printf("err0\n");
-    }
-
-    unsigned char* buf = info.data;
-    memmove(buf, data, size);
-    gst_buffer_unmap(buffer, &info);
-
-    GST_BUFFER_PTS (buffer) = timestamp;
-    // duration = gst_util_uint64_scale_int (1, GST_SECOND, fps);
-    GST_BUFFER_DURATION (buffer) = gst_util_uint64_scale_int (1, GST_SECOND, 25);
-    timestamp += GST_BUFFER_DURATION (buffer);
-
-}

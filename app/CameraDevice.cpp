@@ -144,13 +144,13 @@ void CameraDevice::s1_shooting() const
 
 void CameraDevice::af_shutter() const
 {
-    text input;
-    tout << "Is the focus mode set to AF? (y/n): ";
-    std::getline(tin, input);
-    if (input != TEXT("y")) {
-        tout << "Set the focus mode to AF\n";
-        return;
-    }
+    // text input;
+    // tout << "Is the focus mode set to AF? (y/n): ";
+    // std::getline(tin, input);
+    // if (input != TEXT("y")) {
+    //     tout << "Set the focus mode to AF\n";
+    //     return;
+    // }
 
     tout << "S1 shooting...\n";
     tout << "Shutter Halfpress down\n";
@@ -582,7 +582,7 @@ void CameraDevice::get_live_view(int cnt)
             live_view_buffer_size = image_data->GetImageSize();
             delete[] image_buff; // Release
             delete image_data; // Release
-            tout << "Liveview buffer ready " << live_view_buffer_size << '\n';
+            // tout << "Liveview buffer ready " << live_view_buffer_size << '\n';
 #endif
         }
     }
@@ -770,6 +770,7 @@ void CameraDevice::set_iso()
 
 bool CameraDevice::set_save_info() const
 {
+#if 0
 #if defined(__APPLE__)
     text_char path[255]; /*MAX_PATH*/
     getcwd(path, sizeof(path) -1);
@@ -788,6 +789,23 @@ bool CameraDevice::set_save_info() const
         return false;
     }
     return true;
+#else
+    text path = "/sdcard/storage/";
+    tout << "Save image at " << path.data() << '\n';
+    // clean save directory
+    const char *cmd = g_image_directory_create_cmd;
+    system(cmd);
+    cmd = g_image_directory_clear_cmd;
+    system(cmd);
+
+    auto save_status = SDK::SetSaveInfo(m_device_handle, const_cast<text_char *>(path.data()), TEXT("DCS"), ImageSaveAutoStartNo);
+    if (CR_FAILED(save_status))
+    {
+        tout << "Failed to set save path.\n";
+        return false;
+    }
+    return true;  
+#endif
 }
 
 void CameraDevice::set_shutter_speed()
@@ -1544,12 +1562,12 @@ void CameraDevice::start_recording()
 
     std::this_thread::sleep_for(500ms);
 
-    disconnect();
+    // disconnect();
 }
 
 void CameraDevice::stop_recording()
 {
-    connect();
+    // connect();
 
     std::this_thread::sleep_for(500ms);
 
@@ -1870,9 +1888,44 @@ void CameraDevice::OnWarning(CrInt32u warning)
 {
     text id(this->get_id());
     if (SDK::CrWarning_Connect_Reconnecting == warning) {
+        m_connected.store(false);
         tout << "Device Disconnected. Reconnecting... " << m_info->GetModel() << " (" << id.data() << ")\n";
         return;
     }
+    if (warning == SDK::CrWarning_Connect_Reconnected)
+    {
+       tout << "Device Reconnected...\n";
+       m_connected.store(true);
+    }
+    tout << std::endl << "Warning: 0x" << std::hex << warning << std::dec << '\n';
+
+    // printf warning message
+    tout << "Camera Warning:";
+    if (warning == SDK::CrWarning_Unknown)
+        tout << " SDK::CrWarning_Unknown";
+    else if (warning == SDK::CrWarning_File_StorageFull)
+    {
+        tout << " SDK::CrWarning_File_StorageFull";
+    }
+    else if (warning == SDK::CrWarning_SetFileName_Failed)
+        tout << " SDK::CrWarning_SetFileName_Failed";
+    else if (warning == SDK::CrWarning_GetImage_Failed)
+        tout << " SDK::CrWarning_GetImage_Failed";
+    else if (warning == SDK::CrWarning_NetworkErrorOccurred)
+        tout << " SDK::CrWarning_NetworkErrorOccurred";
+    else if (warning == SDK::CrWarning_NetworkErrorRecovered)
+        tout << " SDK::CrWarning_NetworkErrorRecovered";
+    else if (warning == SDK::CrWarning_Format_Failed)
+        tout << " SDK::CrWarning_Format_Failed";
+    else if (warning == SDK::CrWarning_Format_Invalid)
+        tout << " SDK::CrWarning_Format_Invalid";
+    else if (warning == SDK::CrWarning_Format_Complete)
+        tout << " SDK::CrWarning_Format_Complete";
+    else if (warning == SDK::CrWarning_Exposure_Started)
+        tout << " SDK::CrWarning_Exposure_Started";
+    else if (warning == SDK::CrWarning_Frame_NotUpdated)
+        tout << " SDK::CrWarning_Frame_NotUpdated";
+    tout << "\n";
 }
 
 void CameraDevice::OnError(CrInt32u error)
@@ -1888,6 +1941,18 @@ void CameraDevice::OnError(CrInt32u error)
             tout << "Please input '0' after Connect camera" << std::endl;
             return;
         }
+        tout << "Error: 0x" << std::hex << error << std::dec << '\n';
+        if (error == SDK::CrError_File_StorageFull)
+        {
+            tout << "CrError_File_StorageFull \n";
+            // g_prop.storage_error.current = 1;
+        }
+        if (error == SDK::CrError_File_StorageNotExist)
+        {
+            tout << "CrError_File_StorageNotExist \n";
+            // g_prop.storage_error.current = 1;
+        }
+
     }
 }
 
@@ -2117,7 +2182,6 @@ void CameraDevice::load_properties()
                     m_prop.zoom_operation.possible.swap(mode);
                 }
                 break;
-
             default:
                 break;
             }
