@@ -18,6 +18,7 @@ struct PropertyValueEntry
 
 struct PropertyValueTable
 {
+    PropertyValueEntry<std::uint32_t> sdk_mode;
     PropertyValueEntry<std::uint16_t> f_number;
     PropertyValueEntry<std::uint32_t> iso_sensitivity;
     PropertyValueEntry<std::uint32_t> shutter_speed;
@@ -40,7 +41,17 @@ struct PropertyValueTable
     PropertyValueEntry<std::uint8_t> zoom_operation_status;
     PropertyValueEntry<std::uint8_t> zoom_setting_type;
     PropertyValueEntry<std::uint8_t> zoom_types_status;
-    PropertyValueEntry<std::uint8_t> zoom_operation;
+    PropertyValueEntry<std::int8_t> zoom_operation;
+    PropertyValueEntry<std::int8_t> zoom_speed_range;
+    PropertyValueEntry<std::uint8_t> save_zoom_and_focus_position;
+    PropertyValueEntry<std::uint8_t> load_zoom_and_focus_position;
+    PropertyValueEntry<std::uint8_t> remocon_zoom_speed_type;
+
+    PropertyValueEntry<std::uint16_t> still_image_size;
+    PropertyValueEntry<std::uint16_t> still_image_filetype;
+    PropertyValueEntry<std::uint16_t> still_image_destination;
+    PropertyValueEntry<std::uint16_t> jpeg_quality;
+
 };
 
 std::vector<std::uint16_t> parse_f_number(unsigned char const* buf, std::uint32_t nval);
@@ -61,7 +72,15 @@ std::vector<std::uint16_t> parse_customwb_capture_execution_state(unsigned char 
 std::vector<std::uint8_t> parse_zoom_operation_status(unsigned char const* buf, std::uint8_t nval);
 std::vector<std::uint8_t> parse_zoom_setting_type(unsigned char const* buf, std::uint8_t nval);
 std::vector<std::uint8_t> parse_zoom_types_status(unsigned char const* buf, std::uint8_t nval);
-std::vector<std::uint8_t> parse_zoom_operation(unsigned char const* buf, std::uint8_t nval);
+std::vector<std::int8_t> parse_zoom_operation(unsigned char const* buf, std::uint8_t nval);
+std::vector<std::int8_t> parse_zoom_speed_range(unsigned char const* buf, std::uint8_t nval);
+std::vector<std::uint8_t> parse_save_zoom_and_focus_position(unsigned char const* buf, std::uint8_t nval);
+std::vector<std::uint8_t> parse_load_zoom_and_focus_position(unsigned char const* buf, std::uint8_t nval);
+std::vector<std::uint8_t> parse_remocon_zoom_speed_type(unsigned char const* buf, std::uint8_t nval);
+std::vector<std::uint16_t> parse_still_image_size(unsigned char const* buf, std::uint16_t nval);
+std::vector<std::uint16_t> parse_still_image_filetype(unsigned char const* buf, std::uint16_t nval);
+std::vector<std::uint16_t> parse_still_image_destination(unsigned char const* buf, std::uint16_t nval);
+std::vector<std::uint16_t> parse_jpeg_quality(unsigned char const* buf, std::uint16_t nval);
 
 text format_f_number(std::uint16_t f_number);
 text format_iso_sensitivity(std::uint32_t iso);
@@ -82,7 +101,13 @@ text format_customwb_capture_execution_state(std::uint16_t customwb_capture_exec
 text format_zoom_operation_status(std::uint8_t zoom_operation_status);
 text format_zoom_setting_type(std::uint8_t zoom_setting_type);
 text format_zoom_types_status(std::uint8_t zoom_types_status);
-text format_zoom_operation(std::uint8_t zoom_operation);
+text format_zoom_operation(std::int8_t zoom_operation);
+text format_remocon_zoom_speed_type(std::uint8_t remocon_zoom_speed_type);
+
+text format_still_image_size(std::uint16_t image_size);
+text format_still_image_filetype(std::uint16_t image_type);
+text format_still_image_destination(std::uint16_t image_destination);
+text format_jpeg_quality(std::uint16_t jpeg_quality);
 } // namespace cli
 
 #endif // !PROPERTYVALUETABLE_H

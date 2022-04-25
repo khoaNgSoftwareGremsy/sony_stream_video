@@ -12,6 +12,29 @@
 
 namespace cli
 {
+
+class CRFolderInfos
+{
+public:
+    CRFolderInfos(SCRSDK::CrMtpFolderInfo* info, int32_t nums)
+        : pFolder(info)
+        , numOfContents(nums)
+    {};
+    ~CRFolderInfos()
+    {
+        delete[] pFolder->folderName;
+        pFolder->folderName = NULL;
+        delete pFolder;
+        pFolder = NULL;
+    };
+public:
+    SCRSDK::CrMtpFolderInfo* pFolder;
+    int32_t numOfContents;
+};
+
+typedef std::vector<CRFolderInfos*> MtpFolderList;
+typedef std::vector<SCRSDK::CrMtpContentsInfo*> MtpContentsList;
+
 // Forward declarations
 struct CRLibInterface;
 
@@ -23,7 +46,7 @@ public:
     ~CameraDevice();
 
     // Try to connect to the device
-    bool connect();
+    bool connect(SCRSDK::CrSdkControlMode openMode);
 
     // Disconnect from the device
     bool disconnect();
@@ -49,8 +72,7 @@ public:
     void get_still_capture_mode();
     void get_focus_mode();
     void get_focus_area();
-    // void get_live_view();
-    void get_live_view(char** buffer, int32_t& lenBuff);
+    void get_live_view();
     void get_live_view_image_quality();
     void get_live_view_status();
     void get_af_area_position();
@@ -58,6 +80,10 @@ public:
     void get_white_balance();
     bool get_custom_wb();
     void get_zoom_operation();
+    void get_remocon_zoom_speed_type();
+
+    uint16_t gSony_get_still_image_destination();
+    uint16_t gSony_get_focus_mode();
 
     void set_aperture();
     void set_iso();
@@ -74,20 +100,20 @@ public:
     void set_white_balance();
     void set_custom_wb();
     void set_zoom_operation();
-    
-    void get_live_view(int cnt);
-    char *get_live_view_buffer();
-    int32_t get_live_view_buffer_size();
+    void set_remocon_zoom_speed_type();
+
+    void gSony_set_still_image_destination(uint16_t _value);
+    void gSony_set_focus_mode(uint16_t _index);
+
 
     void execute_lock_property(CrInt16u code);
     void set_select_media_format();
     void execute_movie_rec();
-    void start_recording();
-    void stop_recording();
     void execute_downup_property(CrInt16u code);
     void execute_pos_xy(CrInt16u code);
     void change_live_view_enable();
     bool is_live_view_enable() { return m_lvEnbSet; };
+    void execute_preset_focus();
 
     std::int32_t get_number() { return m_number; }
     text get_model() { return text(m_info->GetModel()); }
@@ -100,6 +126,16 @@ public:
     text mac_address() const;
     std::int16_t pid() const;
 
+    void getContentsList();
+    void pullContents(SCRSDK::CrContentHandle content);
+    void getScreennail(SCRSDK::CrContentHandle content);
+    void getThumbnail(SCRSDK::CrContentHandle content);
+
+    SCRSDK::CrSdkControlMode get_sdkmode();
+
+    std::string get_image_path();
+    void clear_image_path();
+
 public:
     // Inherited via IDeviceCallback
     virtual void OnConnected(SCRSDK::DeviceConnectionVersioin version) override;
@@ -109,9 +145,12 @@ public:
     virtual void OnCompleteDownload(CrChar* filename) override;
     virtual void OnWarning(CrInt32u warning) override;
     virtual void OnError(CrInt32u error) override;
+    virtual void OnPropertyChangedCodes(CrInt32u num, CrInt32u* codes) override;
+    virtual void OnLvPropertyChangedCodes(CrInt32u num, CrInt32u* codes) override;
+    virtual void OnNotifyContentsTransfer(CrInt32u notify, SCRSDK::CrContentHandle contentHandle, CrChar* filename) override;
 
 private:
-    void load_properties();
+    void load_properties(CrInt32u num = 0, CrInt32u* codes = nullptr);
     void get_property(SCRSDK::CrDeviceProperty& prop) const;
     bool set_property(SCRSDK::CrDeviceProperty& prop) const;
 
@@ -126,14 +165,13 @@ private:
     UsbInfo m_usb_info;
     PropertyValueTable m_prop;
     bool m_lvEnbSet;
+    SCRSDK::CrSdkControlMode m_modeSDK;
+    MtpFolderList   m_foldList;
+    MtpContentsList m_contentList;
+    bool m_spontaneous_disconnection;
 
-    const char *g_image_directory_create_cmd = "mkdir /sdcard/storage";
+    std::string g_image_path = "";
 
-    const char *g_image_directory_clear_cmd = "rm -rf /sdcard/storage/*";
-    char* live_view_buffer;
-    int32_t live_view_buffer_size = 0;
-
-    uint8_t still_image_destination;
 };
 } // namespace cli
 

@@ -14,6 +14,10 @@ namespace SCRSDK
 
 	typedef CrInt32u CrImageType;
 
+	typedef CrInt32u CrFolderHandle;
+
+	typedef CrInt32u CrContentHandle;
+
 	enum CrDataType : CrInt32u
 	{
 		CrDataType_Undefined	= 0x0000,

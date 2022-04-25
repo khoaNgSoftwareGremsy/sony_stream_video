@@ -26,7 +26,7 @@
 
 namespace SCRSDK
 {
-enum CrDevicePropertyCode
+enum CrDevicePropertyCode : CrInt32u
 {
 	CrDeviceProperty_Undefined 			= 0,
 
@@ -90,6 +90,8 @@ enum CrDevicePropertyCode
 	CrDeviceProperty_RAW_FileCompressionType,
 	CrDeviceProperty_MediaSLOT1_RAW_FileCompressionType,
 	CrDeviceProperty_MediaSLOT2_RAW_FileCompressionType,
+	CrDeviceProperty_ZoomAndFocusPosition_Save,
+	CrDeviceProperty_ZoomAndFocusPosition_Load,
 
 	CrDeviceProperty_S2 = 0x0500,
 	CrDeviceProperty_reserved10,
@@ -103,6 +105,7 @@ enum CrDevicePropertyCode
 	CrDeviceProperty_CustomWB_Capture_Standby,
 	CrDeviceProperty_CustomWB_Capture_Standby_Cancel,
 	CrDeviceProperty_CustomWB_Capture,
+	CrDeviceProperty_Remocon_Zoom_Speed_Type,
 
 	CrDeviceProperty_GetOnly = 0x0700,
 
@@ -134,23 +137,35 @@ enum CrDevicePropertyCode
 	CrDeviceProperty_CustomWB_Capturable_Area,
 	CrDeviceProperty_CustomWB_Capture_Frame_Size,
 	CrDeviceProperty_CustomWB_Capture_Operation,
-	CrDeviceProperty_FocalPosition,
+	CrDeviceProperty_reserved32,
 	CrDeviceProperty_Zoom_Operation_Status,
 	CrDeviceProperty_Zoom_Bar_Information,
 	CrDeviceProperty_Zoom_Type_Status,
 	CrDeviceProperty_MediaSLOT1_QuickFormatEnableStatus,
 	CrDeviceProperty_MediaSLOT2_QuickFormatEnableStatus,
 	CrDeviceProperty_Cancel_Media_FormatEnableStatus,
+	CrDeviceProperty_Zoom_Speed_Range,
+
+	CrDeviceProperty_SdkControlMode,
+	CrDeviceProperty_ContentsTransferStatus,
+	CrDeviceProperty_ContentsTransferCancelEnableStatus,
+	CrDeviceProperty_ContentsTransferProgress,
 
 	CrDeviceProperty_MaxVal	= 0x1000,
 };
 
-enum CrLiveViewPropertyCode
+enum CrLiveViewPropertyCode : CrInt32u
 {
 	CrLiveViewProperty_AF_Area_Position = CrDevicePropertyCode::CrDeviceProperty_AF_Area_Position,
 	CrLiveViewProperty_Focus_Magnifier_Position = 0x0122,
 	CrLiveViewProperty_LiveViewUndefined = CrDevicePropertyCode::CrDeviceProperty_MaxVal,
 	CrLiveViewProperty__LiveViewMaxVal = 0x2000,
+};
+
+enum CrSdkControlMode : CrInt32u
+{
+	CrSdkControlMode_Remote = 0x00000000,
+	CrSdkControlMode_ContentsTransfer,
 };
 
 // =========================== S1, AEL, FEL, AFL, AWBL ===========================
@@ -197,12 +212,13 @@ enum CrShutterSpeedSet : CrInt32u
 
 // IsoSensitivity
 // type: CrDataType_UInt32
-// value: bit 28-31 ISO mode (CrISOMode), bit 0-27 ISO value
+// value: bit 28-31 extension, bit 24-27 ISO mode, bit 0-23 ISO value
 enum CrISOMode : CrInt32u
 {
-	CrISO_Normal = 0x0,	// ISO setting Normal
-	CrISO_MultiFrameNR = 0x1,	// Multi Frame NR
-	CrISO_MultiFrameNR_High = 0x2,	// Multi Frame NR High
+	CrISO_Normal = 0x00,	// ISO setting Normal
+	CrISO_MultiFrameNR = 0x01,	// Multi Frame NR
+	CrISO_MultiFrameNR_High = 0x02,	// Multi Frame NR High
+	CrISO_Ext = 0x10,	// Indicates of extended value
 	CrISO_AUTO = 0xFFFFFF,
 };
 // ===============================================================================
@@ -249,6 +265,7 @@ enum CrExposureProgram : CrInt32u
 	CrExposure_Movie_SQMotion_A,
 	CrExposure_Movie_SQMotion_S,
 	CrExposure_Movie_SQMotion_M,
+	CrExposure_Movie_SQMotion_AUTO,
 	CrExposure_Flash_Off					= 0x00008060,
 	CrExposure_PictureEffect				= 0x00008070,
 	CrExposure_HiFrameRate_P				= 0x00008080,
@@ -261,6 +278,7 @@ enum CrExposureProgram : CrInt32u
 	CrExposure_SQMotion_M,
 	CrExposure_MOVIE,
 	CrExposure_STILL,
+	CrExposure_Movie_F_Mode,
 };
 
 // FileType
@@ -899,11 +917,31 @@ enum CrZoomOperation : CrInt8
 	CrZoomOperation_Tele = 1,
 };
 
-enum CrRAWFileCompressionType : CrInt16
+// Remocon Zoom Speed Type
+enum CrRemoconZoomSpeedType : CrInt8u
+{
+	CrRemoconZoomSpeedType_Invalid = 0x00,
+	CrRemoconZoomSpeedType_Variable,
+	CrRemoconZoomSpeedType_Fixed,
+};
+
+enum CrRAWFileCompressionType : CrInt16u
 {
 	CrRAWFile_Uncompression = 0x0000,
 	CrRAWFile_Compression,
 	CrRAWFile_LossLess,
+};
+
+enum CrContentsTransferStatus : CrInt16u
+{
+	CrContentsTransfer_OFF = 0x0000,
+	CrContentsTransfer_ON,
+};
+
+enum CrCancelContentsTransferEnableStatus : CrInt16u
+{
+	CrCancelContentsTransfer_Disable = 0x0000,
+	CrCancelContentsTransfer_Enable,
 };
 
 class SCRSDK_API CrDeviceProperty
@@ -916,22 +954,29 @@ public:
 
 	CrDeviceProperty& operator =(const CrDeviceProperty& ref);
 
-	void Alloc(const CrInt32u size, const CrInt32u getSetSize);
+	// Do not use. Will be removed in the next release.
+	void Alloc(const CrInt32u size, const CrInt32u getSetSize); 
 
 	bool IsGetEnableCurrentValue();
 
 	bool IsSetEnableCurrentValue();
 
 	void SetCode(CrInt32u code);
+
 	CrInt32u GetCode();
 
 	void SetValueType(CrDataType type);
 	CrDataType GetValueType();
 
+	// Do not use. Will be removed in the next release.
 	void SetPropertyEnableFlag(CrPropertyEnableFlag flag);
+
+
 	CrPropertyEnableFlag GetPropertyEnableFlag();
 
+	// Do not use. Will be removed in the next release.
 	void SetPropertyVariableFlag(CrPropertyVariableFlag flag);
+
 	CrPropertyVariableFlag GetPropertyVariableFlag();
 
 	void SetCurrentValue(CrInt64u value);
@@ -940,16 +985,24 @@ public:
 	void SetCurrentStr(CrInt16u* str);
 	CrInt16u* GetCurrentStr();
 
+	// Do not use. Will be removed in the next release.
 	void SetValueSize(CrInt32u size);
+
 	CrInt32u GetValueSize();
 
+	// Do not use. Will be removed in the next release.
 	void SetValues(CrInt8u* value);
+
 	CrInt8u* GetValues();
 
+	// Do not use. Will be removed in the next release.
 	void SetSetValueSize(CrInt32u size);
+
 	CrInt32u GetSetValueSize();
 
+	// Do not use. Will be removed in the next release.
 	void SetSetValues(CrInt8u* value);
+
 	CrInt8u* GetSetValues();
 
 private:
@@ -973,23 +1026,34 @@ public:
 	CrLiveViewProperty(const CrLiveViewProperty& ref);
 	CrLiveViewProperty& operator =(const CrLiveViewProperty& ref);
 
+	// Do not use. Will be removed in the next release.
 	void Alloc(const CrInt32u size);
 
 	bool IsGetEnableCurrentValue();
 
+	// Do not use. Will be removed in the next release.
 	void SetCode(CrInt32u code);
+
 	CrInt32u GetCode();
 
+	// Do not use. Will be removed in the next release.
 	void SetPropertyEnableFlag(CrPropertyEnableFlag flag);
+
 	CrPropertyEnableFlag GetPropertyEnableFlag();
 
+	// Do not use. Will be removed in the next release.
 	void SetFrameInfoType(CrFrameInfoType type);
+
 	CrFrameInfoType GetFrameInfoType();
 
+	// Do not use. Will be removed in the next release.
 	void SetValueSize(CrInt32u size);
+
 	CrInt32u GetValueSize();
 
+	// Do not use. Will be removed in the next release.
 	void SetValue(CrInt8u* value);
+
 	CrInt8u* GetValue();
 
 private:
@@ -998,6 +1062,48 @@ private:
         CrFrameInfoType valueType;
 		CrInt32u valueSize;
 		CrInt8u* value;
+};
+
+class SCRSDK_API CrMtpFolderInfo
+{
+public:
+	CrMtpFolderInfo();
+	~CrMtpFolderInfo();
+	CrMtpFolderInfo(const CrMtpFolderInfo& ref);
+	CrMtpFolderInfo& operator =(const CrMtpFolderInfo& ref);
+
+private:
+	// Do not use. Will be removed in the next release.
+	void Alloc(const CrInt32u size); 
+
+public:
+	CrFolderHandle handle;
+	CrInt32u folderNameSize;
+	CrChar*  folderName;
+};
+
+
+class SCRSDK_API CrMtpContentsInfo
+{
+public:
+	CrMtpContentsInfo();
+	~CrMtpContentsInfo();
+	CrMtpContentsInfo(const CrMtpContentsInfo& ref);
+	CrMtpContentsInfo& operator =(const CrMtpContentsInfo& ref);
+
+private:
+	// Do not use. Will be removed in the next release.
+	void Alloc(const CrInt32u size); 
+
+public:
+	CrContentHandle handle;
+	CrFolderHandle parentFolderHandle;
+	CrInt64u contentSize;
+	CrChar dateChar[16];
+	CrInt32u width;
+	CrInt32u height;
+	CrInt32u fileNameSize;
+	CrChar* fileName;
 };
 
 #pragma pack(1)

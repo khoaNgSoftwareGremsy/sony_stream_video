@@ -13,6 +13,8 @@ enum CrCommandId
 	CrCommandId_MediaFormat = 4,
 	CrCommandId_MediaQuickFormat,
 	CrCommandId_CancelMediaFormat,
+	CrCommandId_S1andRelease,
+	CrCommandId_CancelContentsTransfer,
 };
 
 enum CrCommandParam : CrInt16u

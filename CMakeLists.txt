@@ -110,5 +110,5 @@ endif(UNIX AND NOT APPLE)
 
 ## Install application
 ## '.' means, install to the root directory of CMAKE_INSTALL_PREFIX
-install(TARGETS ${remotecli} DESTINATION /usr/bin/tsdk_sony)
-install(DIRECTORY ${cr_ldir}/ DESTINATION /usr/bin/tsdk_sony)
+install(TARGETS ${remotecli} DESTINATION /usr/bin/djipayload_m300/tsdk_sony)
+install(DIRECTORY ${cr_ldir}/ DESTINATION /usr/bin/djipayload_m300/tsdk_sony)

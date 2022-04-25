@@ -21,6 +21,7 @@ namespace cli
         {SCRSDK::CrError_Polling, TEXT("Polling")},
         {SCRSDK::CrError_Adaptor, TEXT("Adaptor")},
         {SCRSDK::CrError_Device,  TEXT("Device ")},
+        {SCRSDK::CrError_Contents,TEXT("Content")},
     };
 
     // Error code detail
@@ -75,6 +76,8 @@ namespace cli
         {SCRSDK::CrError_Connect_FailBusy, TEXT("Connection failed due to processing in progress")},
         {SCRSDK::CrError_Connect_FailUnspecified, TEXT("Unspecified connection failure")},
         {SCRSDK::CrError_Connect_Cancel, TEXT("Connection canceled")},
+        {SCRSDK::CrError_Connect_SessionAlreadyOpened, TEXT("A connection failed because camera was not ready")},
+        {SCRSDK::CrError_Connect_ContentsTransfer_NotSupported, TEXT("This camera does not support content transfer")},
 
         {SCRSDK::CrError_Memory_Unknown, TEXT("Unknown memory error")},
         {SCRSDK::CrError_Memory_OutOfMemory, TEXT("Cannot allocate memory")},
@@ -102,6 +105,14 @@ namespace cli
         {SCRSDK::CrError_Adaptor_DataToWiaItem, TEXT("Failed to set data as WIA item")},
         {SCRSDK::CrError_Adaptor_DeviceBusy, TEXT("The setting side is busy")},
         {SCRSDK::CrError_Adaptor_Escape, TEXT("Escape failed")},
+
+        {SCRSDK::CrError_Contents_Unknown, TEXT("Unknown content transfer error")},
+        {SCRSDK::CrError_Contents_InvalidHandle, TEXT("Not valid content handle")},
+        {SCRSDK::CrError_Contents_DateFolderList_NotRetrieved, TEXT("Date folder list not acquired")},
+        {SCRSDK::CrError_Contents_ContentsList_NotRetrieved, TEXT("Content handle list not acquired")},
+        {SCRSDK::CrError_Contents_Transfer_Unsuccess, TEXT("Content transfer failed")},
+        {SCRSDK::CrError_Contents_Transfer_Cancel,TEXT("Not transferred due to successful content transfer cancel")},
+        {SCRSDK::CrError_Contents_RejectRequest, TEXT("Rejected request")},
 
         {SCRSDK::CrError_Device_Unknown, TEXT("Unknown device error")},
     }; 

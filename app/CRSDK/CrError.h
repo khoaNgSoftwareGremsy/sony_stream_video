@@ -20,6 +20,7 @@ namespace SCRSDK
 		CrError_Polling								= 0x8600,
 		CrError_Adaptor								= 0x8700,
 		CrError_Device								= 0x8800,
+		CrError_Contents							= 0x8C00,
 
 		CrError_Application							= 0xc000, /* Do not use. Will be removed in the next release. */
 
@@ -86,6 +87,10 @@ namespace SCRSDK
 		CrError_Connect_FailBusy,
 		CrError_Connect_FailUnspecified,
 		CrError_Connect_Cancel,
+		CrError_Reserved1,
+		CrError_Reserved2,
+		CrError_Connect_SessionAlreadyOpened,
+		CrError_Connect_ContentsTransfer_NotSupported,
 
 		//Memory related
 		CrError_Memory_Unknown						= CrError_Memory,
@@ -119,6 +124,16 @@ namespace SCRSDK
 
 		CrError_Device_Unknown						= CrError_Device,
 
+		// [MTP] content transfer
+		CrError_Contents_Unknown					= CrError_Contents,
+		CrError_Contents_Reserved1,
+		CrError_Contents_InvalidHandle,
+		CrError_Contents_DateFolderList_NotRetrieved,
+		CrError_Contents_ContentsList_NotRetrieved,
+		CrError_Contents_Transfer_Unsuccess,
+		CrError_Contents_Transfer_Cancel,
+		CrError_Contents_RejectRequest,
+
 		CrWarning_Unknown							= 0x00020000,
 		CrWarning_Connect_Reconnected,
 		CrWarning_Connect_Reconnecting,
@@ -136,7 +151,8 @@ namespace SCRSDK
 		CrWarning_Reserved3,
 		CrWarning_Reserved4,
 		CrWarning_Reserved5,
-		CrWarning_Exposure_Started,
+		CrWarning_Exposure_Started, /* Do not use. Will be removed in the next release. */
+		CrNotify_Captured_Event = CrWarning_Exposure_Started,
 		CrWarning_DateTime_Setting_Result_Invalid,
 		CrWarning_DateTime_Setting_Result_OK,
 		CrWarning_DateTime_Setting_Result_Parameter_Error,
@@ -147,6 +163,17 @@ namespace SCRSDK
 		CrWarning_Connect_Already,
 		CrWarning_Connect_OverLimitOfDevice,
 		CrWarning_Format_Canceled,
+		CrWarning_ZoomAndFocusPosition_Invalid,
+		CrWarning_ZoomAndFocusPosition_DifferentLens,
+		CrWarning_ZoomAndFocusPosition_InvalidLens,
+		CrWarning_ContentsTransferMode_Invalid,
+		CrWarning_ContentsTransferMode_DeviceBusy,
+		CrWarning_ContentsTransferMode_StatusError,
+		CrWarning_ContentsTransferMode_CanceledFromCamera,
+		CrWarning_ContentsTransferCancel_Success,
+		CrWarning_ContentsTransferCancel_Error,
+		CrNotify_ContentsTransfer_Start,
+		CrNotify_ContentsTransfer_Complete,
 	};
 
 	#define CR_SUCCEEDED(e)	(SCRSDK::CrError_None == (e))

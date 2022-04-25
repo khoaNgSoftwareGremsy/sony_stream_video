@@ -265,7 +265,31 @@ std::vector<std::uint8_t> parse_zoom_types_status(unsigned char const* buf, std:
     return result;
 }
 
-std::vector<std::uint8_t> parse_zoom_operation(unsigned char const* buf, std::uint8_t nval)
+std::vector<std::int8_t> parse_zoom_operation(unsigned char const* buf, std::uint8_t nval)
+{
+    using TargetType = std::int8_t;
+    constexpr std::size_t const type_size = sizeof(TargetType);
+    TargetType const* source = reinterpret_cast<TargetType const*>(buf);
+    std::vector<TargetType> result(nval);
+    for (std::uint32_t i = 0; i < nval; ++i, ++source) {
+        std::memcpy(&result[i], source, type_size);
+    }
+    return result;
+}
+
+std::vector<std::int8_t> parse_zoom_speed_range(unsigned char const* buf, std::uint8_t nval)
+{
+    using TargetType = std::int8_t;
+    constexpr std::size_t const type_size = sizeof(TargetType);
+    TargetType const* source = reinterpret_cast<TargetType const*>(buf);
+    std::vector<TargetType> result(nval);
+    for (std::uint32_t i = 0; i < nval; ++i, ++source) {
+        std::memcpy(&result[i], source, type_size);
+    }
+    return result;
+}
+
+std::vector<std::uint8_t> parse_save_zoom_and_focus_position(unsigned char const* buf, std::uint8_t nval)
 {
     using TargetType = std::uint8_t;
     constexpr std::size_t const type_size = sizeof(TargetType);
@@ -273,6 +297,74 @@ std::vector<std::uint8_t> parse_zoom_operation(unsigned char const* buf, std::ui
     std::vector<TargetType> result(nval);
     for (std::uint32_t i = 0; i < nval; ++i, ++source) {
         std::memcpy(&result[i], source, type_size);
+    }
+    return result;
+}
+
+std::vector<std::uint8_t> parse_load_zoom_and_focus_position(unsigned char const* buf, std::uint8_t nval)
+{
+    using TargetType = std::uint8_t;
+    constexpr std::size_t const type_size = sizeof(TargetType);
+    TargetType const* source = reinterpret_cast<TargetType const*>(buf);
+    std::vector<TargetType> result(nval);
+    for (std::uint32_t i = 0; i < nval; ++i, ++source) {
+        std::memcpy(&result[i], source, type_size);
+    }
+    return result;
+}
+
+std::vector<std::uint8_t> parse_remocon_zoom_speed_type(unsigned char const* buf, std::uint8_t nval)
+{
+    using TargetType = std::uint8_t;
+    constexpr std::size_t const type_size = sizeof(TargetType);
+    TargetType const* source = reinterpret_cast<TargetType const*>(buf);
+    std::vector<TargetType> result(nval);
+    for (std::uint32_t i = 0; i < nval; ++i, ++source) {
+        std::memcpy(&result[i], source, type_size);
+    }
+    return result;
+}
+
+std::vector<std::uint16_t> parse_still_image_size(unsigned char const* buf, std::uint16_t nval){
+    using TargetType = std::uint16_t;
+    constexpr std::size_t const type_size = sizeof(TargetType);
+    TargetType const* source = reinterpret_cast<TargetType const*>(buf);
+    std::vector<TargetType> result(nval);
+    for (std::uint32_t i = 0; i < nval; ++i, ++source) {
+        std::memcpy(&result[i], source, type_size);
+    }
+    return result;
+}
+
+std::vector<std::uint16_t> parse_still_image_filetype(unsigned char const* buf, std::uint16_t nval){
+    using TargetType = std::uint16_t;
+    constexpr std::size_t const type_size = sizeof(TargetType);
+    TargetType const* source = reinterpret_cast<TargetType const*>(buf);
+    std::vector<TargetType> result(nval);
+    for (std::uint32_t i = 0; i < nval; ++i, ++source) {
+        std::memcpy(&result[i], source, type_size);
+    }
+    return result;    
+}
+
+std::vector<std::uint16_t> parse_still_image_destination(unsigned char const* buf, std::uint16_t nval){
+    using TargetType = std::uint16_t;
+    constexpr std::size_t const type_size = sizeof(TargetType);
+    TargetType const* source = reinterpret_cast<TargetType const*>(buf);
+    std::vector<TargetType> result(nval);
+    for (std::uint32_t i = 0; i < nval; ++i, ++source) {
+        std::memcpy(&result[i],source,type_size);
+    }
+    return result;
+}
+
+std::vector<std::uint16_t> parse_jpeg_quality(unsigned char const* buf, std::uint16_t nval){
+    using TargetType = std::uint16_t;
+    constexpr std::size_t const type_size = sizeof(TargetType);
+    TargetType const* source = reinterpret_cast<TargetType const*>(buf);
+    std::vector<TargetType> result(nval);
+    for (std::uint32_t i = 0; i < nval; ++i, ++source) {
+        std::memcpy(&result[i],source,type_size);
     }
     return result;
 }
@@ -303,12 +395,27 @@ text format_iso_sensitivity(std::uint32_t iso)
 {
     text_stringstream ts;
 
-    if ((iso & 0x00FFFFFF) == SDK::CrISO_AUTO) {
-        ts << TEXT("AUTO");
+    std::uint32_t iso_ext = (iso >> 24) & 0x000000F0;  // bit 28-31
+    std::uint32_t iso_mode = (iso >> 24) & 0x0000000F; // bit 24-27
+    std::uint32_t iso_value = (iso & 0x00FFFFFF);      // bit  0-23
+
+    if (iso_mode == SDK::CrISO_MultiFrameNR) {
+        ts << TEXT("Multi Frame NR ");
+    }
+    else if (iso_mode == SDK::CrISO_MultiFrameNR_High) {
+        ts << TEXT("Multi Frame NR High ");
+    }
+
+    if (iso_value == SDK::CrISO_AUTO) {
+        ts << TEXT("ISO AUTO");
     }
     else {
-        ts << (iso & 0x0FFFFFFF);
+        ts << TEXT("ISO ") << iso_value;
     }
+
+    //if (iso_ext == SDK::CrISO_Ext) {
+    //    ts << TEXT(" (EXT)");
+    //}
 
     return ts.str();
 }
@@ -474,6 +581,9 @@ text format_exposure_program_mode(std::uint32_t exposure_program_mode)
     case SDK::CrExposureProgram::CrExposure_Movie_SQMotion_M:
         ts << "Movie_SQMotion_M";
         break;
+    case SDK::CrExposureProgram::CrExposure_Movie_SQMotion_AUTO:
+        ts << "Movie_SQMotion_AUTO";
+        break;
      case SDK::CrExposureProgram::CrExposure_Flash_Off:
          ts << "FlashOff";
          break;
@@ -509,6 +619,9 @@ text format_exposure_program_mode(std::uint32_t exposure_program_mode)
         break;
     case SDK::CrExposureProgram::CrExposure_STILL:
         ts << "STILL";
+        break;
+    case SDK::CrExposureProgram::CrExposure_Movie_F_Mode:
+        ts << "Movie_F_Mode";
         break;
     default:
         break;
@@ -1075,24 +1188,130 @@ text format_zoom_types_status(std::uint8_t zoom_types_status)
 
     return ts.str();
 }
-text format_zoom_operation(std::uint8_t zoom_operation)
+text format_zoom_operation(std::int8_t zoom_operation)
 {
     text_stringstream ts;
 
-    switch (zoom_operation) {
-    case SDK::CrZoomOperation::CrZoomOperation_Wide:
-        ts << "Wide";
-        break;
-    case SDK::CrZoomOperation::CrZoomOperation_Stop:
+    if (0 == zoom_operation) {
         ts << "Stop";
-        break;
-    case SDK::CrZoomOperation::CrZoomOperation_Tele:
+    }
+    else if (1 <= zoom_operation && zoom_operation <= 8){
         ts << "Tele";
+    }
+    else if (-8 <= zoom_operation && zoom_operation <= -1) {
+        ts << "Wide";
+    }
+    else {
+        ts << "-";
+    }
+
+    return ts.str();
+}
+
+text format_remocon_zoom_speed_type(std::uint8_t remocon_zoom_speed_type)
+{
+    text_stringstream ts;
+
+    switch (remocon_zoom_speed_type) {
+    case SDK::CrRemoconZoomSpeedType::CrRemoconZoomSpeedType_Invalid:
+        ts << "Invalid";
+        break;
+    case SDK::CrRemoconZoomSpeedType::CrRemoconZoomSpeedType_Variable:
+        ts << "Variable";
+        break;
+    case SDK::CrRemoconZoomSpeedType::CrRemoconZoomSpeedType_Fixed:
+        ts << "Fixed";
         break;
     default:
         break;
     }
 
+    return ts.str();
+}
+
+
+text format_still_image_size(std::uint16_t image_size){
+    text_stringstream ts;
+    switch (image_size){
+        case SDK::CrImageSize::CrImageSize_L:
+            ts << "CrImageSize_L";
+            break;
+        case SDK::CrImageSize::CrImageSize_M:
+            ts << "CrImageSize_M";
+            break;
+        case SDK::CrImageSize::CrImageSize_S:
+            ts << "CrImageSize_S";
+            break;
+        default:
+            break;
+    }
+    return ts.str();
+}
+
+text format_still_image_filetype(std::uint16_t image_type){
+    text_stringstream ts;
+    switch (image_type){
+        case SDK::CrFileType::CrFileType_Jpeg:
+            ts << "CrFileType_Jpeg";
+            break;
+        case SDK::CrFileType::CrFileType_Raw:
+            ts << "CrFileType_Raw";
+            break;
+        case SDK::CrFileType::CrFileType_RawJpeg:
+            ts << "CrFileType_RawJpeg";
+            break;
+        case SDK::CrFileType::CrFileType_RawHeif:
+            ts << "CrFileType_RawHeif";
+            break;
+        case SDK::CrFileType::CrFileType_Heif:
+            ts << "CrFileType_Heif";
+            break;
+        default:
+            break;
+    }
+    return ts.str();
+}
+
+text format_still_image_destination(std::uint16_t image_destination){
+    text_stringstream ts;
+    switch(image_destination){
+        case SDK::CrStillImageStoreDestination::CrStillImageStoreDestination_HostPC:
+            ts << "CrStillImageStoreDestination_HostPC";
+            break;
+        case SDK::CrStillImageStoreDestination::CrStillImageStoreDestination_MemoryCard:
+            ts << "CrStillImageStoreDestination_MemoryCard";
+            break;
+        case SDK::CrStillImageStoreDestination::CrStillImageStoreDestination_HostPCAndMemoryCard:
+            ts << "CrStillImageStoreDestination_HostPCAndMemoryCard";
+            break;
+        default:
+            break;
+    }
+    return ts.str();
+}
+
+
+text format_jpeg_quality(std::uint16_t jpeg_quality){
+    text_stringstream ts;
+    switch(jpeg_quality){
+        case SDK::CrJpegQuality::CrJpegQuality_Unknown:
+            ts << "CrJpegQuality_Unknown";
+            break;
+        case SDK::CrJpegQuality::CrJpegQuality_Light:
+            ts << "CrJpegQuality_Light";
+            break;
+        case SDK::CrJpegQuality::CrJpegQuality_Standard:
+            ts << "CrJpegQuality_Standard";
+            break;
+        case SDK::CrJpegQuality::CrJpegQuality_Fine:
+            ts << "CrJpegQuality_Fine";
+            break;
+        case SDK::CrJpegQuality::CrJpegQuality_ExFine:
+            ts << "CrJpegQuality_ExFine";
+            break;
+        default:
+            break;
+    }
     return ts.str();
 }
 } // namespace cli

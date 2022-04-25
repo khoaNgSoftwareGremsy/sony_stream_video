@@ -64,7 +64,7 @@ CrError EditSDKInfo(CrInt16u infotype);
 extern "C"
 SCRSDK_API
 // This function connects the specified camera as Remote Connect Device.
-CrError Connect(/*in*/ ICrCameraObjectInfo* pCameraObjectInfo, /*in*/  IDeviceCallback* callback, /*out*/ CrDeviceHandle* deviceHandle);
+CrError Connect(/*in*/ ICrCameraObjectInfo* pCameraObjectInfo, /*in*/  IDeviceCallback* callback, /*out*/ CrDeviceHandle* deviceHandle, CrSdkControlMode openMode = CrSdkControlMode_Remote);
 
 extern "C"
 SCRSDK_API
@@ -79,6 +79,10 @@ CrError ReleaseDevice(/*in*/ CrDeviceHandle deviceHandle);
 extern "C"
 SCRSDK_API
 CrError GetDeviceProperties(/*in*/ CrDeviceHandle deviceHandle, /*out*/CrDeviceProperty** properties, /*out*/ CrInt32* numOfPropoties);
+
+extern "C"
+SCRSDK_API
+CrError GetSelectDeviceProperties(/*in*/ CrDeviceHandle deviceHandle, /*in*/ CrInt32u numOfCodes, /*in*/ CrInt32u* codes, /*out*/CrDeviceProperty** properties, /*out*/ CrInt32* numOfPropoties);
 
 extern "C"
 SCRSDK_API
@@ -106,6 +110,10 @@ CrError GetLiveViewProperties(/*in*/ CrDeviceHandle deviceHandle, /*out*/CrLiveV
 
 extern "C"
 SCRSDK_API
+CrError GetSelectLiveViewProperties(/*in*/ CrDeviceHandle deviceHandle, /*in*/ CrInt32u numOfCodes, /*in*/ CrInt32u* codes, /*out*/CrLiveViewProperty** properties, /*out*/ CrInt32* numOfProperties);
+
+extern "C"
+SCRSDK_API
 CrError ReleaseLiveViewProperties(/*in*/ CrDeviceHandle deviceHandle, /*in*/CrLiveViewProperty* properties);
 
 extern "C"
@@ -129,5 +137,40 @@ CrInt32u GetSDKVersion();
 extern "C"
 SCRSDK_API
 CrInt32u GetSDKSerial();
+
+// Get date folders Information
+extern "C"
+SCRSDK_API
+CrError GetDateFolderList(/*in*/ CrDeviceHandle deviceHandle, /*out*/ CrMtpFolderInfo** folders, /*out*/ CrInt32u* numOfFolders);
+
+// Get contents handles array
+extern "C"
+SCRSDK_API
+CrError GetContentsHandleList(/*in*/ CrDeviceHandle deviceHandle, /*in*/CrFolderHandle folderHandle, /*out*/ CrContentHandle** contentsHandles, /*out*/ CrInt32u* numOfContents);
+
+// Get contents Information
+extern "C"
+SCRSDK_API
+CrError GetContentsDetailInfo(/*in*/ CrDeviceHandle deviceHandle, /*in*/CrContentHandle contentHandle, /*out*/ CrMtpContentsInfo* contentsInfo);
+
+// Release get contents Information
+extern "C"
+SCRSDK_API
+CrError ReleaseDateFolderList(/*in*/ CrDeviceHandle deviceHandle, /*in*/ CrMtpFolderInfo* folders);
+
+// Release get contents handles array
+extern "C"
+SCRSDK_API
+CrError ReleaseContentsHandleList(/*in*/ CrDeviceHandle deviceHandle, /*in*/ CrContentHandle* contentsHandles);
+
+// Pull(download) contents file
+extern "C"
+SCRSDK_API
+CrError PullContentsFile(/*in*/ CrDeviceHandle deviceHandle, /*in*/ CrContentHandle contentHandle, /*in*/ CrPropertyStillImageTransSize size = CrPropertyStillImageTransSize_Original, /*in*/ CrChar* path = 0, /*in*/ CrChar* fileName = 0);
+
+// Get thumbnail file
+extern "C"
+SCRSDK_API
+CrError GetContentsThumbnailImage(/*in*/ CrDeviceHandle deviceHandle, /*in*/ CrContentHandle contentHandle, /*out*/ CrImageDataBlock* imageData);
 }
 #endif //CAMERAREMOTE_SDK_H
