@@ -26,7 +26,7 @@ namespace SDK = SCRSDK;
 // Global dll object
 // cli::CRLibInterface* cr_lib = nullptr;
 
-int main()
+int main(int argc, char** argv)
 {
     // Change global locale to native locale
     // std::locale::global(std::locale(""));
@@ -35,7 +35,6 @@ int main()
     // cli::tin.imbue(std::locale());
     // cli::tout.imbue(std::locale());
 
-    cli::tout << "RemoteSampleApp v1.05.00 running...\n\n";
 
     CrInt32u version = SDK::GetSDKVersion();
     int major = (version & 0xFF000000) >> 24;
@@ -544,71 +543,16 @@ int main()
 #endif
                 cli::tout << std::endl;
               #else
-                // if(camera->is_connected()){
-                //     cli::tout << "capture image \n";
-                //     camera->capture_image();
-                // }else{
-                //     ;;
-                // }
-                // usleep(2000000);
 
-                    // /**Shoot First Photo to get name of image*/
-                if(_state == 0){
-                    if(camera->gSony_get_still_image_destination() != 1){
-                        //switch still image destination is PC 
-                        camera->gSony_set_still_image_destination(1);
-                        std::this_thread::sleep_for(500ms);
-                        continue;
-                    }
-                    else{
-                        _state = 1;
-                    }
-                    std::this_thread::sleep_for(1000ms);
-                    _state = 1;
-                }
-                else if(_state == 1){
-                    if(camera->gSony_get_focus_mode() != 1){
-                        //set focus mode of Camera to MF
-                        camera->gSony_set_focus_mode(1);
-                        std::this_thread::sleep_for(500ms);
-                        continue;
+                    if(camera->is_connected()){
+                        cli::tout << "af capture image \n";
+                        // camera->capture_image();
+                        camera->af_shutter();
                     }else{
-                        _state = 2;
-                    }          
-                }
-                else if(_state == 2){
-                    // if(shootFirstPhoto == false){
-                    //     camera->capture_image();
-                    //     std::this_thread::sleep_for(500ms);
-                    //     shootFirstPhoto = true;
-                    // }else{
-                    //     camera->capture_image();
-                    //     std::this_thread::sleep_for(500ms);
-                    //     _state = 3;
-                    // }
-                    if(_count++ <= 12){
-                        printf("_count : %d\n",_count);
-                        std::this_thread::sleep_for(100ms);
-                    }else{
-                        camera->capture_image();
-                        _count = 0;
-                        _state = 3;
+                        ;;
                     }
-                }
-                else if(_state == 3){
+                    usleep(1000000);
 
-                    if(camera->get_image_path() == ""){
-                        // cli::tout << "Waiting for new Image" << std::endl;
-                        std::this_thread::sleep_for(500ms);
-                        continue;
-                    }
-                    cli::tout << "New image : " << camera->get_image_path();     
-                    camera->clear_image_path();
-                    std::this_thread::sleep_for(500ms);
-                    _state = 4;
-                }else {
-                    
-                }
               #endif
             } // end of loop-C
             cli::tout << std::endl;

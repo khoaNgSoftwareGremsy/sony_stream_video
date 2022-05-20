@@ -162,13 +162,13 @@ void CameraDevice::s1_shooting() const
 
 void CameraDevice::af_shutter() const
 {
-    text input;
-    tout << "Is the focus mode set to AF? (y/n): ";
-    std::getline(tin, input);
-    if (input != TEXT("y")) {
-        tout << "Set the focus mode to AF\n";
-        return;
-    }
+    // text input;
+    // tout << "Is the focus mode set to AF? (y/n): ";
+    // std::getline(tin, input);
+    // if (input != TEXT("y")) {
+    //     tout << "Set the focus mode to AF\n";
+    //     return;
+    // }
 
     tout << "S1 shooting...\n";
     tout << "Shutter Halfpress down\n";
@@ -588,7 +588,7 @@ bool CameraDevice::set_save_info() const
         , path, (char*)"", ImageSaveAutoStartNo);
 #else
     // text path = fs::current_path().native();
-    text path = "/mnt/media";
+    text path = "/sdcard";
     tout << path.data() << '\n';
 
     auto save_status = SDK::SetSaveInfo(m_device_handle
@@ -1810,6 +1810,7 @@ text CameraDevice::get_id()
 
 void CameraDevice::OnConnected(SDK::DeviceConnectionVersioin version)
 {
+    tout << "OnConnected\n";
     m_connected.store(true);
     text id(this->get_id());
     tout << "Connected to " << m_info->GetModel() << " (" << id.data() << ")\n";
@@ -1817,6 +1818,7 @@ void CameraDevice::OnConnected(SDK::DeviceConnectionVersioin version)
 
 void CameraDevice::OnDisconnected(CrInt32u error)
 {
+    tout << "OnDisconnected\n";
     m_connected.store(false);
     text id(this->get_id());
     tout << "Disconnected from " << m_info->GetModel() << " (" << id.data() << ")\n";
@@ -1828,23 +1830,24 @@ void CameraDevice::OnDisconnected(CrInt32u error)
 
 void CameraDevice::OnPropertyChanged()
 {
-    // tout << "Property changed.\n";
+    tout << "Property changed.\n";
 }
 
 void CameraDevice::OnLvPropertyChanged()
 {
-    // tout << "LvProperty changed.\n";
+    tout << "LvProperty changed.\n";
 }
 
 void CameraDevice::OnCompleteDownload(CrChar* filename)
 {
     text file(filename);
     tout << "Complete download. File: " << file.data() << '\n';
-    g_image_path = filename;
+    // g_image_path = filename;
 }
 
 void CameraDevice::OnNotifyContentsTransfer(CrInt32u notify, SDK::CrContentHandle contentHandle, CrChar* filename)
 {
+    tout << "OnNotifyContentsTransfer\n";
     // Start
     if (SDK::CrNotify_ContentsTransfer_Start == notify)
     {
@@ -1871,6 +1874,7 @@ void CameraDevice::OnNotifyContentsTransfer(CrInt32u notify, SDK::CrContentHandl
 
 void CameraDevice::OnWarning(CrInt32u warning)
 {
+    tout << "OnWarning\n";
     text id(this->get_id());
     if (SDK::CrWarning_Connect_Reconnecting == warning) {
         m_connected.store(false);
@@ -1897,6 +1901,7 @@ void CameraDevice::OnWarning(CrInt32u warning)
 
 void CameraDevice::OnPropertyChangedCodes(CrInt32u num, CrInt32u* codes)
 {
+    tout << "OnPropertyChangedCodes\n";
     //tout << "Property changed.  num = " << std::dec << num;
     //tout << std::hex;
     //for (std::int32_t i = 0; i < num; ++i)
@@ -1904,12 +1909,12 @@ void CameraDevice::OnPropertyChangedCodes(CrInt32u num, CrInt32u* codes)
     //    tout << ", 0x" << codes[i];
     //}
     //tout << std::endl << std::dec;
-    load_properties(num, codes);
+    // load_properties(num, codes);
 }
 
 void CameraDevice::OnLvPropertyChangedCodes(CrInt32u num, CrInt32u* codes)
 {
-    //tout << "LvProperty changed.  num = " << std::dec << num;
+    tout << "LvProperty changed.  num = " << std::dec << num;
     //tout << std::hex;
     //for (std::int32_t i = 0; i < num; ++i)
     //{
@@ -1971,6 +1976,7 @@ void CameraDevice::OnLvPropertyChangedCodes(CrInt32u num, CrInt32u* codes)
 
 void CameraDevice::OnError(CrInt32u error)
 {
+    tout << "OnError\n";
     text id(this->get_id());
     text msg = get_message_desc(error);
     if (!msg.empty()) {
